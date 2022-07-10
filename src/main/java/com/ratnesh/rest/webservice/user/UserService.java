@@ -4,8 +4,11 @@ import java.net.URI;
 import java.util.List;
 
 import javax.validation.Valid;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,12 +36,21 @@ public class UserService {
 	}
 
 	@GetMapping(path = "/users/{id}")
-	public User getUser(@PathVariable int id) {
+	public EntityModel<User> getUser(@PathVariable int id) {
+		
 		User savedUser = userDao.findOne(id);
 		
 		if (savedUser==null)
 			throw new UserNotFoundException("id-"+id);
-		return savedUser;
+		
+		EntityModel<User> model = EntityModel.of(savedUser);
+		
+		WebMvcLinkBuilder linkTo = 
+				linkTo(methodOn(this.getClass()).getUsers());
+		
+		model.add(linkTo.withRel("users-list"));
+		
+		return model;
 	}
 	
 	@DeleteMapping(path = "/users/{id}")
