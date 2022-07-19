@@ -5,14 +5,17 @@ import java.util.List;
 
 import javax.persistence.Entity;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 import javax.validation.constraints.Past;
 import javax.validation.constraints.Size;
 
 import org.hibernate.annotations.BatchSize;
 
-public class User {
+@Entity
+public class MyUser {
 	
+	@Id
 	private Integer id;
 	
 	@Size(min = 2, message="Name should have atleast 2 characters")
@@ -20,14 +23,24 @@ public class User {
 	
 	@Past
 	private Date birthDate;
-	private List<Address> addressList;
-	public List<Address> getAddressList() {
-		return addressList;
+	
+	@OneToMany(mappedBy = "myUser")
+	private List<MyAddress> addresses;
+	
+	public List<MyAddress> getAddresses() {
+		return addresses;
 	}
-	public void setAddressList(List<Address> addressList) {
-		this.addressList = addressList;
+
+	public void setAddresses(List<MyAddress> addresses) {
+		this.addresses = addresses;
 	}
-	public User(Integer id, String name, Date birthDate) {
+
+	private MyUser()
+	{
+		
+	}
+	
+	public MyUser(Integer id, String name, Date birthDate) {
 		super();
 		this.id = id;
 		this.name = name;

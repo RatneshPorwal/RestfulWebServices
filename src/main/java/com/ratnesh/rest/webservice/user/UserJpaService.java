@@ -2,6 +2,7 @@ package com.ratnesh.rest.webservice.user;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 import javax.validation.Valid;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
@@ -19,32 +20,41 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.ratnesh.rest.webservice.user.bean.Address;
+import com.ratnesh.rest.webservice.user.bean.MyAddress;
 import com.ratnesh.rest.webservice.user.bean.MyUser;
 import com.ratnesh.rest.webservice.user.bean.User;
+import com.ratnesh.rest.webservice.user.dao.AddressRepository;
+import com.ratnesh.rest.webservice.user.dao.UserRepository;
 import com.ratnesh.rest.webservice.user.dao.UserServiceDAO;
 import com.ratnesh.rest.webservice.user.exception.MissingMandatoryInformationException;
 import com.ratnesh.rest.webservice.user.exception.UserNotFoundException;
 
 @RestController
-public class UserService {
+public class UserJpaService {
+	
+	@Autowired
+	private UserRepository userRepository;
+	
+	@Autowired
+	private AddressRepository addressRepository;
 
 	@Autowired
 	private UserServiceDAO userDao;
 
-	@GetMapping(path = "/users")
-	public List<User> getUsers() {
-		return userDao.findAll();
+	@GetMapping(path = "/jpa/users")
+	public List<MyUser> getUsers() {
+		return userRepository.findAll();
 	}
 
-	@GetMapping(path = "/users/{id}")
-	public EntityModel<User> getUser(@PathVariable int id) {
+	@GetMapping(path = "/jpa/users/{id}")
+	public EntityModel<Optional<MyUser>> getUser(@PathVariable int id) {
 		
-		User savedUser = userDao.findOne(id);
+		Optional<MyUser> savedUser = userRepository.findById(id);
 		
 		if (savedUser==null)
 			throw new UserNotFoundException("id-"+id);
 		
-		EntityModel<User> model = EntityModel.of(savedUser);
+		EntityModel<Optional<MyUser>> model = EntityModel.of(savedUser);
 		
 		WebMvcLinkBuilder linkTo = 
 				linkTo(methodOn(this.getClass()).getUsers());
@@ -54,20 +64,18 @@ public class UserService {
 		return model;
 	}
 	
-	@DeleteMapping(path = "/users/{id}")
+	@DeleteMapping(path = "/jpa/users/{id}")
 	public void removeUser(@PathVariable int id) {
-		User removedUser = userDao.deleteById(id);
-		
-		if (removedUser==null)
-			throw new UserNotFoundException("id-"+id);
+		 userRepository.deleteById(id);
+	
 		
 	}
 
-	@PostMapping(path = "/users")
-	public ResponseEntity saveUser(@Valid @RequestBody User user) {
+	@PostMapping(path = "/jpa/users")
+	public ResponseEntity saveUser(@Valid @RequestBody MyUser user) {
 		
 		
-		User savedUser = userDao.save(user);
+		MyUser savedUser = userRepository.save(user);
 		URI location = ServletUriComponentsBuilder.fromCurrentRequest()
 				.path("/{id}")
 				.buildAndExpand(savedUser.getId())
@@ -76,26 +84,36 @@ public class UserService {
 		return ResponseEntity.created(location).build();
 	}
 	
-	@GetMapping(path = "/users/{id}/addresses")
-	public List<Address> getAddresses(@PathVariable int id) {
+	@GetMapping(path = "/jpa/users/{id}/addresses")
+	public List<MyAddress> getAddresses(@PathVariable int id) {
+		Optional<MyUser> savedUser = userRepository.findById(id);
 		
-		return userDao.findAllAddress(id);
+		if(!savedUser.isPresent())
+			throw new UserNotFoundException("id-"+id);
+			
+		
+		return savedUser.get().getAddresses();
 	}
 	
-	@PostMapping(path = "/users/{id}/addresses")
-	public ResponseEntity saveAddress(@PathVariable int id,@RequestBody Address address) {
+	@PostMapping(path = "/jpa/users/{id}/addresses")
+	public ResponseEntity saveAddress(@PathVariable int id,@RequestBody MyAddress address) {
+
+		Optional<MyUser> savedUser = userRepository.findById(id);
 		
-		if(address.getDistrict()==null)
-		{
-			throw new MissingMandatoryInformationException("MissingMandatoryInformationException ");
-		}
+		if(!savedUser.isPresent())
+			throw new UserNotFoundException("id-"+id);
 		
-		User user = userDao.saveAddress(id,address);
-		URI location = ServletUriComponentsBuilder.fromCurrentRequest().build().toUri();
-		/*
-		 * URI location = ServletUriComponentsBuilder.fromCurrentRequest()
-		 * .path("/{id}") .buildAndExpand(id) .toUri();
-		 */
+		MyUser myUser=savedUser.get();
+		
+		address.setMyUser(myUser);
+		
+		addressRepository.save(address);
+		
+		//URI location = ServletUriComponentsBuilder.fromCurrentRequest().build().toUri();
+		
+		  URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+		  .path("/{id}") .buildAndExpand(address.getId()) .toUri();
+		 
 
 		return ResponseEntity.created(location).build();
 	}

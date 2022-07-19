@@ -8,6 +8,7 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 
 import com.ratnesh.rest.webservice.user.bean.Address;
+import com.ratnesh.rest.webservice.user.bean.MyUser;
 import com.ratnesh.rest.webservice.user.bean.User;
 
 @Component
